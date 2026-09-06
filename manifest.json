@@ -1,0 +1,15 @@
+{
+  "name": "Bau Aircon Services",
+  "short_name": "BauAircon",
+  "start_url": "login.html",
+  "display": "standalone",
+  "background_color": "#1a2537",
+  "theme_color": "#2196f3",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

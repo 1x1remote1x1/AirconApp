@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2196f3">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bau Aircon Services</title>
+<style>
+*{box-sizing:border-box}body{font-family:Arial;background:#eef2f7;margin:0;display:flex}
+.sidebar{width:240px;background:#1a2537;color:#fff;min-height:100vh;padding:20px;position:fixed}
+.menu{padding:12px;cursor:pointer;border-radius:8px;margin:6px 0}.menu.active{background:#2c4a6b}
+.main{margin-left:260px;padding:20px;width:100%}
+.card{background:#fff;padding:16px;border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,.08);margin-bottom:16px}
+input,select{width:100%;padding:11px;margin:6px 0;border:1px solid #ddd;border-radius:8px}
+.btn{width:100%;padding:12px;background:#2196f3;color:#fff;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin-top:8px}
+.job{display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #eee}
+.badge{padding:4px 8px;border-radius:12px;color:#fff;font-size:11px}
+.pending{background:orange}.scheduled{background:#2196f3}.done{background:#4caf50}.offline-dot{color:red;font-size:10px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-day{background:#fff;padding:8px;border-radius:8px;min-height:70px;border-left:4px solid #eee;font-size:11px}
+</style>
+</head>
+<body>
+<div class="sidebar">
+<div style="text-align:center;padding-bottom:15px;border-bottom:1px solid #2c4a6b;margin-bottom:15px">
+<img src="logo.png" style="width:70px;border-radius:12px">
+<h2 style="margin:8px 0 0 0;font-size:18px">Bau Aircon</h2>
+<small style="color:#4fc3f7">Calamba Laguna</small>
+<div id="netStatus" style="font-size:11px;margin-top:8px;background:#2c4a6b;padding:4px;border-radius:6px"></div>
+</div>
+<div class="menu active" onclick="showTab('dash',this)">📊 Dashboard</div>
+<div class="menu" onclick="showTab('cal',this)">📅 Calendar</div>
+<div class="menu" onclick="showTab('jobs',this)">📦 Job Tracker</div>
+<div class="menu" onclick="showTab('cust',this)">👥 Customers</div>
+<div class="menu" onclick="showTab('accounts',this)">👤 Accounts</div>
+<div class="menu" onclick="logout()" style="margin-top:40px;background:#c62828">🚪 Logout</div>
+</div>
+
+<div class="main">
+<div id="dash" class="tab">
+<div class="card" style="background:linear-gradient(135deg,#2196f3,#21cbf3);color:#fff">
+<h3 style="margin:0">💰 KITA DASHBOARD</h3>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+<div style="background:rgba(255,255,255,.2);padding:10px;border-radius:10px">Total Kita<br><b style="font-size:22px" id="totalKita">P0</b></div>
+<div style="background:rgba(255,255,255,.2);padding:10px;border-radius:10px">Pending Singilin<br><b style="font-size:22px" id="pendingKita">P0</b></div>
+<div style="background:rgba(255,255,255,.2);padding:10px;border-radius:10px">Ngayong Araw<br><b id="todayKita">P0</b></div>
+<div style="background:rgba(255,255,255,.2);padding:10px;border-radius:10px">Buwan na to<br><b id="monthKita">P0</b></div>
+</div>
+</div>
+<div class="card"><h3>📊 Summary</h3>Total: <b id="total">0</b> | Pending: <b id="pend" style="color:orange">0</b> | Scheduled: <b id="sched" style="color:#2196f3">0</b> | Done: <b id="done" style="color:green">0</b> | Unsynced: <b id="unsynced" style="color:red">0</b><br><br><div id="incomeByService"></div></div>
+<div class="card"><h3>+ New Booking</h3>
+<input id="cname" placeholder="Customer"><input id="phone" placeholder="Phone">
+<select id="service" onchange="checkCustom()"><option>Cleaning</option><option>Repair</option><option>Installation</option><option>Freon Charging</option><option>Checkup</option><option>Dismantling</option><option value="custom">+ Custom...</option></select>
+<input id="customService" placeholder="Custom service" style="display:none">
+<input id="date" type="date"><input id="time" type="time"><input id="fee" placeholder="Fee">
+<select id="status"><option value="pending">PENDING</option><option value="scheduled">Scheduled</option><option value="done">Done</option></select>
+<button class="btn" onclick="addJob()">+ SAVE</button>
+</div>
+</div>
+
+<div id="cal" class="tab" style="display:none"><div class="card"><h3>📅 Calendar</h3><div class="cal-grid" id="calGrid"></div></div></div>
+<div id="jobs" class="tab" style="display:none"><div class="card"><h3>📦 Job Tracker <small id="syncInfo" style="color:gray"></small></h3><div id="jobList"></div></div></div>
+<div id="cust" class="tab" style="display:none"><div class="card"><h3>👥 Customers</h3><div id="custList"></div></div></div>
+<div id="accounts" class="tab" style="display:none"><div class="card"><h3>👤 Accounts</h3><p>Logged: <b id="currentUser"></b> (<span id="currentRole"></span>)</p><h4>+ Add Technician</h4><input id="newUser" placeholder="Username"><input id="newPass" placeholder="Password"><select id="newRole"><option value="tech">Technician</option><option value="admin">Admin</option></select><button class="btn" onclick="addAccount()">Add Account</button><h4>All Accounts</h4><div id="accountList"></div></div></div>
+</div>
+
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
+if(!localStorage.getItem('loggedUser')){window.location='login.html';}
+
+let jobs=JSON.parse(localStorage.getItem('aircon_jobs')||'[]');
+let accounts=JSON.parse(localStorage.getItem('bau_accounts')||'[{"user":"admin","pass":"admin123","role":"admin"},{"user":"tech1","pass":"tech123","role":"tech"}]');
+
+function showTab(id,el){document.querySelectorAll('.tab').forEach(t=>t.style.display='none');document.getElementById(id).style.display='block';document.querySelectorAll('.menu').forEach(m=>m.classList.remove('active'));if(el)el.classList.add('active');}
+function checkCustom(){document.getElementById('customService').style.display=document.getElementById('service').value=='custom'?'block':'none';}
+
+// OFFLINE-FIRST SAVE
+function addJob(){
+  let s=document.getElementById('service').value;
+  let cs=document.getElementById('customService').value;
+  let finalService=s=='custom'?cs:s;
+  if(!document.getElementById('cname').value)return alert('Lagyan name boss');
+  let j={
+    id:Date.now(),
+    name:document.getElementById('cname').value,
+    phone:document.getElementById('phone').value,
+    service:finalService,
+    date:document.getElementById('date').value,
+    time:document.getElementById('time').value,
+    fee:document.getElementById('fee').value,
+    status:document.getElementById('status').value,
+    synced: navigator.onLine? true : false
+  };
+  jobs.push(j);
+  localStorage.setItem('aircon_jobs',JSON.stringify(jobs));
+  if(navigator.onLine){
+    alert('✅ Saved & Synced Online!');
+  }else{
+    alert('📱 Offline Saved! Sa phone mo muna, auto-sync pag may signal');
+  }
+  render();
+}
+
+function render(){
+  let totalKita=jobs.filter(j=>j.status=='done').reduce((s,j)=>s+(parseInt(j.fee)||0),0);
+  let pendingKita=jobs.filter(j=>j.status!='done').reduce((s,j)=>s+(parseInt(j.fee)||0),0);
+  let today=new Date().toISOString().split('T')[0];
+  let todayKitaVal=jobs.filter(j=>j.date==today&&j.status=='done').reduce((s,j)=>s+(parseInt(j.fee)||0),0);
+  let thisMonth=new Date().getMonth();
+  let monthKitaVal=jobs.filter(j=>new Date(j.date).getMonth()==thisMonth&&j.status=='done').reduce((s,j)=>s+(parseInt(j.fee)||0),0);
+  document.getElementById('totalKita').innerText='P'+totalKita;
+  document.getElementById('pendingKita').innerText='P'+pendingKita;
+  document.getElementById('todayKita').innerText='P'+todayKitaVal;
+  document.getElementById('monthKita').innerText='P'+monthKitaVal;
+  document.getElementById('total').innerText=jobs.length;
+  document.getElementById('pend').innerText=jobs.filter(j=>j.status=='pending').length;
+  document.getElementById('sched').innerText=jobs.filter(j=>j.status=='scheduled').length;
+  document.getElementById('done').innerText=jobs.filter(j=>j.status=='done').length;
+  document.getElementById('unsynced').innerText=jobs.filter(j=>!j.synced).length;
+  let byService={};jobs.filter(j=>j.status=='done').forEach(j=>{byService[j.service]=(byService[j.service]||0)+(parseInt(j.fee)||0);});
+  document.getElementById('incomeByService').innerHTML='<b>Kita per Service:</b><br>'+Object.entries(byService).map(([k,v])=>`• ${k}: P${v}`).join('<br>')||'Wala pang done';
+  document.getElementById('jobList').innerHTML=jobs.slice().sort((a,b)=>a.status=='pending'?-1:1).map(j=>`<div class="job"><div><b>${j.name}</b> ${!j.synced?'<span class="offline-dot">● offline</span>':''}<br><small>${j.date} ${j.time} - ${j.service} - P${j.fee}</small></div><div><span class="badge ${j.status}">${j.status}</span><br><button onclick="delJob(${j.id})" style="background:red;color:#fff;border:none;padding:2px 6px;border-radius:4px">x</button></div></div>`).join('')||'Wala pa';
+  document.getElementById('custList').innerHTML=[...new Map(jobs.map(j=>[j.name,j])).values()].map(j=>`<div class="job"><b>${j.name}</b> - ${j.phone}</div>`).join('')||'Wala pa';
+  let html=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<b>${d}</b>`).join('');for(let i=1;i<=30;i++){let dJobs=jobs.filter(j=>new Date(j.date).getDate()==i);html+=`<div class="cal-day"><b>${i}</b><br>${dJobs.map(j=>j.time+' '+j.name.substring(0,8)).join('<br>')}</div>`}document.getElementById('calGrid').innerHTML=html;
+  document.getElementById('currentUser').innerText=localStorage.getItem('loggedUser');
+  document.getElementById('currentRole').innerText=localStorage.getItem('userRole');
+  document.getElementById('accountList').innerHTML=accounts.map((a,i)=>`<div class="job"><div><b>${a.user}</b> - ${a.role}</div><button onclick="deleteAccount(${i})" style="background:red;color:#fff;border:none;padding:4px 8px;border-radius:4px">Del</button></div>`).join('');
+  document.getElementById('netStatus').innerHTML=navigator.onLine?'🟢 Online':'🔴 Offline Mode';
+  document.getElementById('syncInfo').innerText=navigator.onLine?`(${jobs.filter(j=>!j.synced).length} unsynced)`:'Offline';
+}
+
+// AUTO SYNC PAG ONLINE NA
+window.addEventListener('online',()=>{
+  let un=jobs.filter(j=>!j.synced);
+  if(un.length>0){
+    un.forEach(j=>j.synced=true);
+    localStorage.setItem('aircon_jobs',JSON.stringify(jobs));
+    alert(`🟢 Online na boss! Na-sync ${un.length} jobs na offline`);
+  }
+  render();
+});
+window.addEventListener('offline',()=>{render();});
+
+function delJob(id){if(confirm('Delete?')){jobs=jobs.filter(j=>j.id!=id);localStorage.setItem('aircon_jobs',JSON.stringify(jobs));render()}}
+function addAccount(){let u=document.getElementById('newUser').value;let p=document.getElementById('newPass').value;let r=document.getElementById('newRole').value;if(!u||!p)return alert('Kulang');accounts.push({user:u,pass:p,role:r});localStorage.setItem('bau_accounts',JSON.stringify(accounts));document.getElementById('newUser').value='';document.getElementById('newPass').value='';render();}
+function deleteAccount(i){if(accounts[i].user=='admin')return alert('Di pwede delete admin');if(confirm('Delete?')){accounts.splice(i,1);localStorage.setItem('bau_accounts',JSON.stringify(accounts));render();}}
+function logout(){if(confirm('Logout boss?')){localStorage.removeItem('loggedUser');localStorage.removeItem('userRole');window.location='login.html';}}
+document.getElementById('date').valueAsDate=new Date();render();
+</script>
+</body>
+</html>

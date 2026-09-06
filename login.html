@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2196f3">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login - Bau Aircon</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden}
+body{display:flex;justify-content:center;align-items:center;font-family:Arial;background:#1a2537}
+.bg-slide{position:fixed;top:0;left:0;width:100vw;height:100vh;background-size:cover;background-position:center;background-repeat:no-repeat;transition:opacity 1.5s;z-index:-2}
+.bg-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.5);z-index:-1}
+.login-box{background:rgba(255,255,255,.97);padding:30px;border-radius:16px;width:90%;max-width:360px;box-shadow:0 10px 30px rgba(0,0,0,.6);text-align:center;z-index:10}
+input{width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px}
+.btn{width:100%;padding:12px;background:#2196f3;color:#fff;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="bg-slide" id="bg1"></div>
+<div class="bg-slide" id="bg2" style="opacity:0"></div>
+<div class="bg-overlay"></div>
+
+<div class="login-box">
+<img src="logo.png" style="width:100px;border-radius:20px;margin-bottom:10px">
+<h2 style="margin:5px 0">❄️ Bau Aircon Services</h2>
+<small style="color:gray">Calamba Laguna</small>
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password">
+<button class="btn" onclick="login()">LOGIN</button>
+<p style="font-size:11px;color:gray;margin-top:12px">admin / admin123<br>tech1 / tech123</p>
+<div id="netStat" style="font-size:10px;margin-top:8px;color:#2196f3"></div>
+</div>
+
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
+
+// DITO BOSS - KAHIT WALA YUNG IBANG PNG, DI MAG-ERROR
+let images = ["1.png","2.png","3.png","4.png","5.png","6.png","7.png","8.png","9.png","logo.png"];
+
+// Check kung existing yung image bago gamitin
+function imageExists(url, cb){
+  let img=new Image();img.onload=()=>cb(true);img.onerror=()=>cb(false);img.src=url;
+}
+
+let validImages=[];
+let loaded=0;
+images.forEach(url=>{
+  imageExists(url, (ok)=>{
+    if(ok) validImages.push(url);
+    loaded++;
+    if(loaded==images.length){
+      if(validImages.length==0) validImages=["logo.png"];
+      startSlideshow();
+    }
+  });
+});
+
+let bg1=document.getElementById('bg1');
+let bg2=document.getElementById('bg2');
+let current=0, showFirst=true;
+
+function setBg(el,url){
+  el.style.backgroundImage=`url('${url}')`;
+}
+
+function startSlideshow(){
+  setBg(bg1,validImages[0]);
+  setInterval(()=>{
+    current=(current+1)%validImages.length;
+    if(showFirst){
+      setBg(bg2,validImages[current]);
+      bg2.style.opacity=1;
+      bg1.style.opacity=0;
+    } else {
+      setBg(bg1,validImages[current]);
+      bg1.style.opacity=1;
+      bg2.style.opacity=0;
+    }
+    showFirst=!showFirst;
+  },4000);
+}
+
+function updateNet(){document.getElementById('netStat').innerHTML=navigator.onLine?'🟢 Online - Ready to sync':'🔴 Offline - Save sa phone muna';}
+updateNet();
+window.addEventListener('online',updateNet);
+window.addEventListener('offline',updateNet);
+
+function login(){
+  let accounts=JSON.parse(localStorage.getItem('bau_accounts')||'[{"user":"admin","pass":"admin123","role":"admin"},{"user":"tech1","pass":"tech123","role":"tech"}]');
+  let u=document.getElementById('user').value,p=document.getElementById('pass').value;
+  let f=accounts.find(a=>a.user==u&&a.pass==p);
+  if(f){localStorage.setItem('loggedUser',f.user);localStorage.setItem('userRole',f.role);window.location='index.html';}
+  else alert('Mali boss! Try admin / admin123');
+}
+</script>
+</body>
+</html>
