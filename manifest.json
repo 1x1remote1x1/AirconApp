@@ -1,11 +1,11 @@
 {
-  "name": "Bau Aircon Services",
+  "name": "Bau Aire Air Conditioning",
   "short_name": "BauAircon",
-  "description": "Bau Aircon Services Calamba Laguna - Job Tracker and Kita Dashboard",
+  "description": "Beat the heat with our cool services",
   "start_url": "login.html",
   "display": "standalone",
-  "background_color": "#1a2537",
-  "theme_color": "#2196f3",
+  "background_color": "#ffffff",
+  "theme_color": "#0f3568",
   "icons": [
     {
       "src": "logo.png",
